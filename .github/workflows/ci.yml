@@ -17,8 +17,8 @@ on:
 # ──────────────────────────────────────────────────────────────────────────────
 env:
   DOTNET_VERSION: '8.0.x'
-  SOLUTION_PATH: './SearchLibrarySolution/SearchLibrarySolution.sln'
-  TEST_PROJECT:  './SearchLibrarySolution/SearchLibrary.Tests/SearchLibrary.Tests.csproj'
+  SOLUTION_PATH: './SearchLibrarySolution.sln'
+  TEST_PROJECT:  './SearchLibrary.Tests/SearchLibrary.Tests.csproj'
 
 jobs:
   # ============================================================================
