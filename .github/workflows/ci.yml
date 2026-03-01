@@ -1,0 +1,92 @@
+
+name: .NET CI – Search Library
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Trigger: run on every push to any branch AND on every pull request targeting
+#          the main branch.  This ensures that new code is always verified before
+#          it can be merged.
+# ──────────────────────────────────────────────────────────────────────────────
+on:
+  push:
+    branches: [ "**" ]
+  pull_request:
+    branches: [ main ]
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Environment defaults shared by all steps
+# ──────────────────────────────────────────────────────────────────────────────
+env:
+  DOTNET_VERSION: '8.0.x'
+  SOLUTION_PATH: './SearchLibrarySolution/SearchLibrarySolution.sln'
+  TEST_PROJECT:  './SearchLibrarySolution/SearchLibrary.Tests/SearchLibrary.Tests.csproj'
+
+jobs:
+  # ============================================================================
+  # JOB 1 – build-and-test
+  # ============================================================================
+  build-and-test:
+    name: Build, Test & Coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── Step 1: Check out repository ──────────────────────────────────────
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      # ── Step 2: Set up .NET SDK ────────────────────────────────────────────
+      - name: Set up .NET ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      # ── Step 3: Restore NuGet packages ────────────────────────────────────
+      - name: Restore NuGet dependencies
+        run: dotnet restore ${{ env.SOLUTION_PATH }}
+
+      # ── Step 4: Build (fail fast on compilation errors) ───────────────────
+      - name: Build solution
+        run: dotnet build ${{ env.SOLUTION_PATH }} --no-restore --configuration Release
+
+      # ── Step 5: Run xUnit tests with code-coverage collection ─────────────
+      #   --no-build         : re-uses the Release build from the previous step
+      #   --logger trx       : produces a machine-readable XML report
+      #   --collect          : activates Coverlet's built-in data collector
+      #   DataCollectionRunSettings : outputs coverage in multiple formats
+      - name: Run unit tests and collect coverage
+        run: |
+          dotnet test ${{ env.TEST_PROJECT }} \
+            --no-build \
+            --configuration Release \
+            --logger "trx;LogFileName=test-results.trx" \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./TestResults \
+            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura \
+               DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Include="[SearchLibrary]*"
+
+      # ── Step 6: Upload test results as a downloadable artifact ─────────────
+      - name: Upload test results
+        if: always()          # upload even when tests fail so we can inspect
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: ./TestResults/**/*.trx
+
+      # ── Step 7: Upload coverage report ────────────────────────────────────
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: ./TestResults/**/coverage.cobertura.xml
+
+      # ── Step 8: Publish coverage summary to the GitHub Actions Summary page ──
+      - name: Generate coverage summary
+        if: always()
+        uses: irongut/CodeCoverageSummary@v1.3.0
+        with:
+          filename: ./TestResults/**/coverage.cobertura.xml
+          badge: true
+          format: markdown
+          output: both
+          thresholds: '60 80'
+          fail_below_min: true

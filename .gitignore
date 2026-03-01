@@ -1,0 +1,14 @@
+## .NET build outputs
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+## Test results and coverage
+TestResults/
+CoverageReport/
+
+## Temp files
+install_tool.bat
+*.tmp
