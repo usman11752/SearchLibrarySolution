@@ -48,20 +48,16 @@ jobs:
         run: dotnet build ${{ env.SOLUTION_PATH }} --no-restore --configuration Release
 
       # ── Step 5: Run xUnit tests with code-coverage collection ─────────────
-      #   --no-build         : re-uses the Release build from the previous step
-      #   --logger trx       : produces a machine-readable XML report
-      #   --collect          : activates Coverlet's built-in data collector
-      #   DataCollectionRunSettings : outputs coverage in multiple formats
+      #   Uses coverlet.runsettings for coverage config (avoids vstest hang)
+      #   Output: Cobertura XML in ./TestResults/
       - name: Run unit tests and collect coverage
         run: |
           dotnet test ${{ env.TEST_PROJECT }} \
-            --no-build \
             --configuration Release \
-            --logger "trx;LogFileName=test-results.trx" \
+            --settings coverlet.runsettings \
             --collect:"XPlat Code Coverage" \
             --results-directory ./TestResults \
-            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura \
-               DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Include="[SearchLibrary]*"
+            --logger "trx;LogFileName=test-results.trx"
 
       # ── Step 6: Upload test results as a downloadable artifact ─────────────
       - name: Upload test results
